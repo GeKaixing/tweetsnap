@@ -1,97 +1,70 @@
-# Twitter Screenshot Button
-Version 1.1
+﻿# TwitterImage
 
-A Tampermonkey userscript that adds a screenshot button to **the "More" menu (three dots icon)** of Twitter/X posts, allowing you to easily capture and save tweets as images.
+![TwitterImage Logo](./logo.png)
 
-https://github.com/learnerLj/twitter-screenshot
-## 推特截图按钮
+一个用于 **X/Twitter -> 小红书** 的 Chrome 扩展：
+- 在推文三点菜单中提供截图与视频下载能力
+- 截图后自动跳转小红书创作页并自动填充图文
 
-一个Tampermonkey油猴脚本，为Twitter/X**推文的"更多"菜单（三个点图标）**添加截图按钮，让您可以轻松地将推文保存为图片。
+## 功能
 
-## Features 功能
+- 推文截图（按移动端宽度渲染）
+- 视频下载（优先通过 `react-tweet` API 获取最高码率 mp4）
+- 截图后自动跳转到小红书发布页
+- 自动填充标题与正文
+- 如果推文包含图片，上传顺序为：
+  1. 推文截图
+  2. 推文原图（依次追加）
+- 文案中英文自动跟随 X 页面语言
+- 视频下载显示实时状态（下载中/完成/失败，支持百分比或 MB）
 
-- One-click screenshot of tweets
-- High-quality image capture
-- Automatic clipboard copy
-- Download option
-- Clean and native UI integration
-- Support for both twitter.com and x.com
-- Adapts to both Light and Dark modes automatically
-- **New:** Capture entire tweet threads by the original author (including automatically expanding replies)
+## 安装（开发者模式）
 
-- 一键截图推文
-- 高质量图片捕获
-- 自动复制到剪贴板
-- 下载选项
-- 简洁的原生UI集成
-- 同时支持twitter.com和x.com
-- 自动适配亮色和暗色模式
-- **新功能:** 截取原作者的整个推文串（包括自动展开回复）
+1. 打开 Chrome：`chrome://extensions`
+2. 打开右上角“开发者模式”
+3. 点击“加载已解压的扩展程序”
+4. 选择目录：`C:\Users\gekaixing\Desktop\xtoimage`
 
-## Installation 安装
+## 使用
 
-1. Install Tampermonkey browser extension
-2. Click [here](https://greasyfork.org/zh-CN/scripts/532781-twitter-screenshot-button) to install the script
-3. Refresh Twitter/X page
+### 1) 推文截图并发布到小红书
 
-1. 安装Tampermonkey浏览器扩展
-2. 点击[这里](https://greasyfork.org/zh-CN/scripts/532781-twitter-screenshot-button)安装脚本
-3. 刷新Twitter/X页面
+1. 打开任意推文，点击右上角三点菜单
+2. 点击 `Screenshot`
+3. 扩展会自动：
+   - 生成截图
+   - 打开小红书发布页
+   - 自动上传图片并填充文案
 
-## Usage 使用方法
+### 2) 下载推文视频
 
-1. Click the **"More" menu (three dots icon) on the top right of any tweet**. The "Screenshot" button and "Capture Thread" button will appear at the top of the menu.
-   点击任意推文**右上角的"更多"菜单（三个点图标）**，"Screenshot" 和 "Capture Thread" 按钮会出现在菜单顶部。
+1. 打开带视频的推文，点击三点菜单
+2. 点击 `Download Video`
+3. 浏览器开始下载并显示下载状态
 
-   ![Icon Position](./icoin-position.png)
+## 技术说明
 
-2. **Screenshot Single Tweet:** Click the "Screenshot" button.
-   **截取单个推文：** 点击"Screenshot"按钮。
+- 扩展类型：Chrome Extension Manifest V3
+- 截图渲染：`dom-to-image`
+- 小红书自动填充：content script + `chrome.storage.local`
+- 视频下载：
+  - 主路径：`https://react-tweet.vercel.app/api/tweet/<tweetId>` 解析 mp4 直链
+  - 备选路径：从页面 video 元素提取源地址
 
-3. The screenshot will be automatically copied to your clipboard, and a confirmation notification will appear.
-   截图将自动复制到剪贴板，并显示确认通知。
+## 已知限制
 
-   ![Screenshot Notification](./screen2.png)
+- 某些受保护或特殊编码视频可能无法直接下载
+- 小红书页面结构变动时，自动填充选择器可能需要更新
+- 自动上传图片数量默认最多 9 张（受平台常见上限影响）
 
-4. Optionally click "Download" on the notification to save the image file.
-   可选择点击通知上的"Download"按钮来保存图片文件。
+## 项目结构（核心文件）
 
-3. **Capture Entire Thread:** Click the "Capture Thread" button. The script will attempt to:
-    - Find the original author's handle.
-    - Automatically click "Show more replies" to load the thread (up to a limit).
-    - Filter and find all posts by the original author in the loaded thread.
-    - Automatically click internal "Show more" buttons within long tweets in the thread.
-    - Take individual screenshots of each tweet.
-    - Stitch the screenshots together into one image.
-    - Copy the final image to the clipboard and provide a download option.
-    *Note: This process can take some time depending on the thread length.*
-   **截取整个推文串：** 点击"Capture Thread"按钮。脚本将尝试：
-    - 找到原作者的用户名。
-    - 自动点击"显示更多回复"来加载整个推文串（有次数限制）。
-    - 在加载的推文串中筛选并找到原作者的所有帖子。
-    - 自动点击推文串中长推文内部的"显示更多"按钮。
-    - 对每条推文进行单独截图。
-    - 将截图拼接成一张长图。
-    - 将最终的图片复制到剪贴板并提供下载选项。
-    *注意：根据推文串的长度，此过程可能需要一些时间。*
+- `manifest.json`：扩展配置
+- `content.js`：X 页面注入、截图、视频下载、提示逻辑
+- `background.js`：下载任务与进度消息
+- `xhs-autofill.js`：小红书页面自动填充
+- `icons/`：扩展图标
 
-**Note:** For long tweets that have a "Show more" button, please click "Show more" first to expand the full content before taking the **single** screenshot to ensure the entire tweet is captured. The "Capture Thread" function handles internal expansion automatically.
-**注意：** 对于包含"显示更多"按钮的长推文，在进行**单条推文截图**时，请先点击"显示更多"展开全部内容，以确保捕获完整的推文。"截取推文串"功能会自动处理内部展开。
+## License
 
-   ![Screenshot Example](./screen1.png)
-
-## Requirements 要求
-
-- Tampermonkey browser extension
-- Modern browser with clipboard API support
-
-- Tampermonkey浏览器扩展
-- 支持剪贴板API的现代浏览器
-
-## Author 作者
-
-Jiahao Luo (luoshitou9@gmail.com)
-
-## License 许可证
-
-MIT License 
+MIT
