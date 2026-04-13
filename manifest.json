@@ -1,0 +1,41 @@
+﻿{
+  "manifest_version": 3,
+  "name": "X to Image",
+  "version": "0.1.0",
+  "description": "Add a button to generate images from X/Twitter posts.",
+  "permissions": [
+    "downloads",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://creator.xiaohongshu.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": [
+        "vendor/dom-to-image.min.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://creator.xiaohongshu.com/*"
+      ],
+      "js": [
+        "xhs-autofill.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
