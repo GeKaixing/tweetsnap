@@ -138,15 +138,21 @@
     return scored[0] ? scored[0].input : null;
   }
 
-  function tryUploadImage(imageDataUrl, filename) {
+  function tryUploadImages(imageDataUrls, filenamePrefix) {
     const input = findImageUploadInput();
     if (!input) {
       return false;
     }
 
-    const file = dataUrlToFile(imageDataUrl, filename);
+    if (!Array.isArray(imageDataUrls) || imageDataUrls.length === 0) {
+      return false;
+    }
+
     const dt = new DataTransfer();
-    dt.items.add(file);
+    imageDataUrls.slice(0, 9).forEach((dataUrl, index) => {
+      const file = dataUrlToFile(dataUrl, `${filenamePrefix}_${index + 1}.png`);
+      dt.items.add(file);
+    });
     input.files = dt.files;
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -219,7 +225,10 @@
 
       const title = buildTitle(payload);
       const content = buildContent(payload);
-      const filename = payload.filename || `tweet-${Date.now()}.png`;
+      const filenamePrefix = (payload.filename || `tweet-${Date.now()}.png`).replace(/\.[a-z0-9]+$/i, '');
+      const imageDataUrls = Array.isArray(payload.imageDataUrls) && payload.imageDataUrls.length > 0
+        ? payload.imageDataUrls
+        : (payload.imageDataUrl ? [payload.imageDataUrl] : []);
 
       let attempts = 0;
       const maxAttempts = 80;
@@ -230,7 +239,7 @@
         attempts += 1;
 
         ensureImagePostTab();
-        if (!uploaded) uploaded = tryUploadImage(payload.imageDataUrl, filename);
+        if (!uploaded) uploaded = tryUploadImages(imageDataUrls, filenamePrefix);
         if (!titled) titled = tryFillTitle(title);
         if (!contented) contented = tryFillContent(content);
 
