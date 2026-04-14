@@ -1,7 +1,9 @@
 ﻿(function() {
     'use strict';
     const XHS_PUBLISH_URL = 'https://creator.xiaohongshu.com/publish/publish?source=&published=true&from=tab_switch&target=image';
-    const STORAGE_KEY = 'xtoimage_pending_post';
+    const INSTAGRAM_CREATE_URL = 'https://www.instagram.com/';
+    const XHS_STORAGE_KEY = 'xtoimage_pending_post';
+    const INSTAGRAM_STORAGE_KEY = 'xtoimage_pending_post_instagram';
     const MOBILE_TWEET_WIDTH = 375;
     const REACT_TWEET_API_BASE_URL = 'https://react-tweet.vercel.app/api/tweet/';
 
@@ -344,6 +346,48 @@
         });
     }
 
+    function loadImageFromDataUrl(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = dataUrl;
+        });
+    }
+
+    async function normalizeInstagramImageTopAnchored(dataUrl) {
+        // Instagram feed max portrait is 4:5. If image is taller than that,
+        // crop from the top instead of center to keep the "start" of content.
+        const MIN_RATIO = 4 / 5;
+        try {
+            const img = await loadImageFromDataUrl(dataUrl);
+            const width = img.naturalWidth || img.width;
+            const height = img.naturalHeight || img.height;
+            if (!width || !height) return { dataUrl, wasTopCropped: false };
+
+            const ratio = width / height;
+            if (ratio >= MIN_RATIO) {
+                return { dataUrl, wasTopCropped: false };
+            }
+
+            const targetHeight = Math.floor(width / MIN_RATIO);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return { dataUrl, wasTopCropped: false };
+
+            // Top-aligned draw: keep top area, cut from the bottom.
+            ctx.drawImage(img, 0, 0, width, targetHeight, 0, 0, width, targetHeight);
+            return {
+                dataUrl: canvas.toDataURL('image/png'),
+                wasTopCropped: true
+            };
+        } catch (error) {
+            return { dataUrl, wasTopCropped: false };
+        }
+    }
+
     async function fetchImageAsDataUrl(url) {
         try {
             const response = await fetch(url);
@@ -423,14 +467,28 @@
         });
     }
 
-    async function savePendingToXhs(blob, tweetContainer) {
+    async function savePendingPost(blob, tweetContainer, storageKey, options = {}) {
         if (!chrome.storage || !chrome.storage.local) {
             return false;
         }
 
+        const forInstagram = !!options.forInstagram;
         const tweetData = collectTweetData(tweetContainer);
-        const screenshotDataUrl = await blobToDataURL(blob);
-        const tweetImageDataUrls = await collectTweetImageDataUrls(tweetContainer);
+        const screenshotDataUrlRaw = await blobToDataURL(blob);
+        const screenshotProcessed = forInstagram
+            ? await normalizeInstagramImageTopAnchored(screenshotDataUrlRaw)
+            : { dataUrl: screenshotDataUrlRaw, wasTopCropped: false };
+        const screenshotDataUrl = screenshotProcessed.dataUrl;
+
+        const tweetImageDataUrlsRaw = await collectTweetImageDataUrls(tweetContainer);
+        const tweetImageProcessed = forInstagram
+            ? await Promise.all(tweetImageDataUrlsRaw.map((item) => normalizeInstagramImageTopAnchored(item)))
+            : tweetImageDataUrlsRaw.map((item) => ({ dataUrl: item, wasTopCropped: false }));
+        const tweetImageDataUrls = tweetImageProcessed.map((item) => item.dataUrl);
+        const instagramNeedsOriginalClick = forInstagram && (
+            screenshotProcessed.wasTopCropped || tweetImageProcessed.some((item) => item.wasTopCropped)
+        );
+
         const imageDataUrls = [screenshotDataUrl, ...tweetImageDataUrls];
         const payload = {
             id: `xtoimage-${Date.now()}`,
@@ -440,12 +498,47 @@
             imageDataUrls,
             tweetText: tweetData.text,
             tweetUrl: tweetData.tweetUrl,
-            author: tweetData.author
+            author: tweetData.author,
+            instagramNeedsOriginalClick
         };
 
         return new Promise((resolve) => {
-            chrome.storage.local.set({ [STORAGE_KEY]: payload }, () => {
+            chrome.storage.local.set({ [storageKey]: payload }, () => {
                 resolve(!chrome.runtime.lastError);
+            });
+        });
+    }
+
+    function openInstagramCreatePage() {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = (ok) => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve(ok);
+                }
+            };
+
+            const fallbackTimer = setTimeout(() => {
+                window.location.href = INSTAGRAM_CREATE_URL;
+                done(true);
+            }, 900);
+
+            if (!chrome.runtime || !chrome.runtime.sendMessage) {
+                clearTimeout(fallbackTimer);
+                window.location.href = INSTAGRAM_CREATE_URL;
+                done(true);
+                return;
+            }
+
+            chrome.runtime.sendMessage({ type: 'OPEN_INSTAGRAM_CREATE' }, (response) => {
+                clearTimeout(fallbackTimer);
+                if (chrome.runtime.lastError || !response || !response.ok) {
+                    window.location.href = INSTAGRAM_CREATE_URL;
+                    done(true);
+                    return;
+                }
+                done(true);
             });
         });
     }
@@ -547,7 +640,7 @@
         return { mount, clone };
     }
 
-    function takeScreenshot(menuButton) {
+    function takeScreenshot(menuButton, destination = 'xhs') {
         const notification = document.createElement('div');
         notification.className = 'screenshot-notification';
         notification.innerHTML = t('正在截图...', 'Taking screenshot...');
@@ -619,14 +712,39 @@
                         console.warn('Clipboard copy failed:', clipboardError);
                     }
 
-                    const saved = await savePendingToXhs(blob, tweetContainer);
-                    await openXhsPublishPage();
+                    if (destination === 'download') {
+                        const tweetData = collectTweetData(tweetContainer);
+                        const filename = `${sanitizeFilename(tweetData && tweetData.author ? tweetData.author : 'tweet')}_${Date.now()}.png`;
+                        downloadBlob(blob, filename);
+                        notification.innerHTML = `<div>${t('截图已保存到本地', 'Screenshot saved to local')}</div>`;
+                        notification.style.backgroundColor = '#17BF63';
+                        setTimeout(() => {
+                            notification.classList.add('fade-out');
+                            setTimeout(() => notification.remove(), 500);
+                        }, 1800);
+                        return;
+                    }
 
-                    if (saved) {
+                    const isInstagram = destination === 'instagram';
+                    const storageKey = isInstagram ? INSTAGRAM_STORAGE_KEY : XHS_STORAGE_KEY;
+                    const saved = await savePendingPost(blob, tweetContainer, storageKey, { forInstagram: isInstagram });
+                    if (isInstagram) {
+                        await openInstagramCreatePage();
+                    } else {
+                        await openXhsPublishPage();
+                    }
+
+                    if (saved && isInstagram) {
+                        notification.innerHTML = `<div>${t('截图成功，正在跳转 Instagram 并自动填充贴文...', 'Screenshot captured. Redirecting to Instagram and preparing post...')}</div>`;
+                        notification.style.backgroundColor = '#17BF63';
+                    } else if (saved) {
                         notification.innerHTML = `<div>${t('截图成功，正在跳转小红书并自动填充...', 'Screenshot captured. Redirecting to Xiaohongshu and autofilling...')}</div>`;
                         notification.style.backgroundColor = '#17BF63';
                     } else {
-                        notification.innerHTML = `<div>${t('已跳转小红书，但自动填充数据保存失败，请手动上传。', 'Redirected to Xiaohongshu, but autofill data failed to save. Please upload manually.')}</div>`;
+                        notification.innerHTML = `<div>${isInstagram
+                            ? t('已跳转 Instagram，但自动填充数据保存失败，请手动上传。', 'Redirected to Instagram, but autofill data failed to save. Please upload manually.')
+                            : t('已跳转小红书，但自动填充数据保存失败，请手动上传。', 'Redirected to Xiaohongshu, but autofill data failed to save. Please upload manually.')
+                        }</div>`;
                         notification.style.backgroundColor = '#F59E0B';
                     }
                     setTimeout(() => {
@@ -763,6 +881,44 @@
         svg.appendChild(path);
         svg.appendChild(polyline);
         svg.appendChild(line);
+        return svg;
+    }
+
+    function createInstagramIcon() {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("xmlns", svgNS);
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("width", "18.75");
+        svg.setAttribute("height", "18.75");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "2");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        svg.classList.add("screenshot-icon");
+
+        const rect = document.createElementNS(svgNS, "rect");
+        rect.setAttribute("x", "3");
+        rect.setAttribute("y", "3");
+        rect.setAttribute("width", "18");
+        rect.setAttribute("height", "18");
+        rect.setAttribute("rx", "5");
+        rect.setAttribute("ry", "5");
+
+        const circle = document.createElementNS(svgNS, "circle");
+        circle.setAttribute("cx", "12");
+        circle.setAttribute("cy", "12");
+        circle.setAttribute("r", "4");
+
+        const dot = document.createElementNS(svgNS, "circle");
+        dot.setAttribute("cx", "17");
+        dot.setAttribute("cy", "7");
+        dot.setAttribute("r", "1");
+
+        svg.appendChild(rect);
+        svg.appendChild(circle);
+        svg.appendChild(dot);
         return svg;
     }
 
@@ -1060,7 +1216,7 @@
     function addScreenshotButtonToMenu(menuButton) {
         const menu = document.querySelector('[role="menu"]');
         // Check if buttons already exist
-        if (!menu || menu.querySelector('.screenshot-button') || menu.querySelector('.capture-thread-button') || menu.querySelector('.download-video-button')) return;
+        if (!menu || menu.querySelector('.screenshot-button') || menu.querySelector('.capture-thread-button') || menu.querySelector('.download-video-button') || menu.querySelector('.post-instagram-button') || menu.querySelector('.save-local-button')) return;
 
         function createScreenshotMenuItem(label) {
             const button = document.createElement('div');
@@ -1088,8 +1244,54 @@
             return button;
         }
 
-        const screenshotButton = createScreenshotMenuItem(t('截图', 'Screenshot'));
+        const screenshotButton = createScreenshotMenuItem(t('发送到小红书', 'Send to Xiaohongshu'));
         menu.insertBefore(screenshotButton, menu.firstChild);
+
+        const instagramButton = document.createElement('div');
+        instagramButton.className = 'screenshot-button post-instagram-button';
+        instagramButton.setAttribute('role', 'menuitem');
+        instagramButton.setAttribute('tabindex', '0');
+        instagramButton.appendChild(createInstagramIcon());
+
+        const textInstagram = document.createElement('span');
+        textInstagram.textContent = t('发送到 Instagram', 'Send to Instagram');
+        textInstagram.style.marginLeft = '12px';
+        textInstagram.style.fontSize = '15px';
+        textInstagram.style.fontWeight = 'bold';
+        instagramButton.appendChild(textInstagram);
+
+        instagramButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            takeScreenshot(menuButton, 'instagram');
+            setTimeout(() => {
+                const closeButton = document.querySelector('[data-testid="Dropdown"] [aria-label="Close"]');
+                if (closeButton) closeButton.click();
+            }, 100);
+        });
+        menu.appendChild(instagramButton);
+
+        const saveLocalButton = document.createElement('div');
+        saveLocalButton.className = 'screenshot-button save-local-button';
+        saveLocalButton.setAttribute('role', 'menuitem');
+        saveLocalButton.setAttribute('tabindex', '0');
+        saveLocalButton.appendChild(createDownloadIcon());
+
+        const textLocal = document.createElement('span');
+        textLocal.textContent = t('截图保存到本地', 'Save Screenshot Locally');
+        textLocal.style.marginLeft = '12px';
+        textLocal.style.fontSize = '15px';
+        textLocal.style.fontWeight = 'bold';
+        saveLocalButton.appendChild(textLocal);
+
+        saveLocalButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            takeScreenshot(menuButton, 'download');
+            setTimeout(() => {
+                const closeButton = document.querySelector('[data-testid="Dropdown"] [aria-label="Close"]');
+                if (closeButton) closeButton.click();
+            }, 100);
+        });
+        menu.appendChild(saveLocalButton);
 
         const downloadVideoButton = document.createElement('div');
         downloadVideoButton.className = 'screenshot-button download-video-button';

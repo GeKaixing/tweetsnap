@@ -26,6 +26,7 @@
     "https://x.com/*",
     "https://twitter.com/*",
     "https://creator.xiaohongshu.com/*",
+    "https://www.instagram.com/*",
     "https://react-tweet.vercel.app/*"
   ],
   "background": {
@@ -49,6 +50,15 @@
       ],
       "js": [
         "xhs-autofill.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.instagram.com/*"
+      ],
+      "js": [
+        "instagram-autofill.js"
       ],
       "run_at": "document_idle"
     }

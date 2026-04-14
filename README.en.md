@@ -2,9 +2,10 @@
 
 ![TwitterImage Logo](./logo.png)
 
-A Chrome extension for **X/Twitter -> Xiaohongshu** workflows:
+A Chrome extension for **X/Twitter -> Xiaohongshu / Instagram** workflows:
 - Add screenshot and video-download actions to the tweet three-dot menu
 - After screenshot, auto-open Xiaohongshu publish page and auto-fill content
+- Supports auto-opening Instagram post composer and autofilling content
 
 ## Features
 
@@ -12,6 +13,9 @@ A Chrome extension for **X/Twitter -> Xiaohongshu** workflows:
 - Video download (prefers highest-bitrate mp4 via `react-tweet` API)
 - Auto-redirect to Xiaohongshu publish page after screenshot
 - Auto-fill title and body text
+- Auto-redirect to Instagram post creation page after screenshot
+- Auto-upload images and fill Instagram caption (final publish remains manual)
+- Supports saving screenshot directly to local downloads
 - If a tweet contains images, upload order is:
   1. Tweet screenshot
   2. Tweet original images (appended in order)
@@ -30,13 +34,28 @@ A Chrome extension for **X/Twitter -> Xiaohongshu** workflows:
 ### 1) Screenshot a tweet and publish to Xiaohongshu
 
 1. Open any tweet and click the three-dot menu
-2. Click `Screenshot`
+2. Click `Send to Xiaohongshu`
 3. The extension will automatically:
    - capture the screenshot
    - open Xiaohongshu publish page
    - upload images and fill content
 
-### 2) Download tweet video
+### 2) Screenshot a tweet and send to Instagram post
+
+1. Open any tweet and click the three-dot menu
+2. Click `Send to Instagram`
+3. The extension will automatically:
+   - capture the screenshot
+   - open Instagram post creation flow
+   - upload images and fill caption (you manually click Publish)
+
+### 3) Save screenshot locally
+
+1. Open any tweet and click the three-dot menu
+2. Click `Save Screenshot Locally`
+3. Browser downloads the screenshot PNG directly
+
+### 4) Download tweet video
 
 1. Open a tweet that contains video
 2. Click the three-dot menu
@@ -64,6 +83,7 @@ A Chrome extension for **X/Twitter -> Xiaohongshu** workflows:
 - `content.js`: X page injection, screenshot, video download, UI notices
 - `background.js`: download task + progress relay
 - `xhs-autofill.js`: Xiaohongshu autofill logic
+- `instagram-autofill.js`: Instagram post autofill logic
 - `icons/`: extension icons
 
 ## License

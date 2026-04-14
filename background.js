@@ -99,6 +99,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'OPEN_INSTAGRAM_CREATE') {
+    const url = 'https://www.instagram.com/';
+    chrome.tabs.create({ url }, () => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
   if (message.type === 'DOWNLOAD_VIDEO_URL') {
     if (!message.url) {
       sendResponse({ ok: false, error: 'Missing url' });
