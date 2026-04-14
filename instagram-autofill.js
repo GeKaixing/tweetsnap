@@ -2,6 +2,7 @@
   const STORAGE_KEY = 'xtoimage_pending_post_instagram';
   const DONE_KEY = 'xtoimage_last_applied_instagram_id';
   const MAX_PENDING_AGE_MS = 30 * 60 * 1000;
+  const EXACT_CAPTION_SELECTOR = 'body > div.x1n2onr6.xzkaem6 > div.x9f619.x1n2onr6.x1ja2u2z > div > div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div > div.x15wfb8v.x3aagtl.x6ql1ns.x78zum5.xdl72j9.x1iyjqo2.xs83m0k.x13vbajr.x1ue5u6n > div.xwt6s21.x1t7ytsu.xpilrb4.x9f619.x78zum5.x1n2onr6.x1f4304s > div > div > div > div > div:nth-child(2) > div > div.x6s0dn4.x78zum5.x1n2onr6.xh8yej3 > div.xw2csxc.x1odjw0f.x1n2onr6.x1hnll1o.xpqswwc.xl565be.x5dp1im.xdj266r.x14z9mp.xat24cr.x1lziwak.x1w2wdq1.xen30ot.xf7dkkf.xv54qhq.xh8yej3.x5n08af.notranslate';
   const EXACT_CROP_TOGGLE_SELECTOR = 'body > div.x1n2onr6.xzkaem6 > div.x9f619.x1n2onr6.x1ja2u2z > div > div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div > div.xdl72j9.x1iyjqo2.xs83m0k.x15wfb8v.x3aagtl.xqbdwvv.x6ql1ns.x1cwzgcd > div.x6s0dn4.x78zum5.x5yr21d.xl56j7k.x1n2onr6.xh8yej3 > div > div > div > div > div.html-div.xexx8yu.xyri2b.x18d9i69.x1c1uobl.x9f619.xjbqb8w.x78zum5.x15mokao.x1ga7v0g.x16uus16.xbiv7yw.x1xmf6yo.x1xegmmw.x1e56ztr.x13fj5qh.x10l6tqk.x1ey2m1c.x1o0tod.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.xdt5ytf.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1 > div > div:nth-child(2) > div > button';
   const EXACT_ORIGINAL_OPTION_SELECTOR = 'body > div.x1n2onr6.xzkaem6 > div.x9f619.x1n2onr6.x1ja2u2z > div > div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div > div.xdl72j9.x1iyjqo2.xs83m0k.x15wfb8v.x3aagtl.xqbdwvv.x6ql1ns.x1cwzgcd > div.x6s0dn4.x78zum5.x5yr21d.xl56j7k.x1n2onr6.xh8yej3 > div > div > div > div > div.html-div.xexx8yu.xyri2b.x18d9i69.x1c1uobl.x9f619.xjbqb8w.x78zum5.x15mokao.x1ga7v0g.x16uus16.xbiv7yw.x1xmf6yo.x1xegmmw.x1e56ztr.x13fj5qh.x10l6tqk.x1ey2m1c.x1o0tod.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.xdt5ytf.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1 > div > div.html-div.xdj266r.x14z9mp.xat24cr.x1lziwak.x9f619.xf68679.xjbqb8w.x78zum5.x15mokao.x1ga7v0g.x16uus16.xbiv7yw.x1y1aw1k.xf159sx.xwib8y2.xmzvs34.x1n2onr6.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.xdt5ytf.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1 > div > div:nth-child(1)';
 
@@ -26,6 +27,7 @@
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2800);
   }
+
 
   function dataUrlToFile(dataUrl, filename) {
     const parts = dataUrl.split(',');
@@ -317,10 +319,21 @@
   }
 
   function tryFillCaption(caption) {
+    const exactNode = document.querySelector(EXACT_CAPTION_SELECTOR);
+    if (exactNode && isElementVisible(exactNode)) {
+      exactNode.focus();
+      exactNode.textContent = caption;
+      exactNode.dispatchEvent(new InputEvent('input', { bubbles: true, data: caption, inputType: 'insertText' }));
+      exactNode.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+
     const textboxSelectors = [
       'textarea[aria-label*="caption" i]',
       'textarea[placeholder*="caption" i]',
       '[contenteditable="true"][aria-label*="caption" i]',
+      'div.notranslate[contenteditable="true"]',
+      'div.notranslate[role="textbox"]',
       'textarea[aria-label*="说明"]',
       '[contenteditable="true"][aria-label*="说明"]',
       '[contenteditable="true"][role="textbox"]',
