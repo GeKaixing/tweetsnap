@@ -1,14 +1,14 @@
 ﻿(() => {
-  const STORAGE_KEY = 'xtoimage_pending_post';
-  const DONE_KEY = 'xtoimage_last_applied_id';
+  const STORAGE_KEY = 'tweetsnap_pending_post';
+  const DONE_KEY = 'tweetsnap_last_applied_id';
   const MAX_PENDING_AGE_MS = 30 * 60 * 1000;
 
   function log(...args) {
-    console.log('[xtoimage][xhs]', ...args);
+    console.log('[tweetsnap][xhs]', ...args);
   }
 
   function showToast(message, isError = false) {
-    const id = 'xtoimage-xhs-toast';
+    const id = 'tweetsnap-xhs-toast';
     const old = document.getElementById(id);
     if (old) old.remove();
 

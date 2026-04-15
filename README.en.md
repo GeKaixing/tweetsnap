@@ -1,90 +1,72 @@
-﻿# TwitterImage
+﻿# tweetsnap
 
-![TwitterImage Logo](./logo.png)
+![tweetsnap Logo](./logo.png)
 
-A Chrome extension for **X/Twitter -> Xiaohongshu / Instagram** workflows:
-- Add screenshot and video-download actions to the tweet three-dot menu
-- After screenshot, auto-open Xiaohongshu publish page and auto-fill content
-- Supports auto-opening Instagram post composer and autofilling content
+A Chrome extension for **X / Twitter, Instagram, and Xiaohongshu** cross-post workflows.
 
-## Features
+## What It Does
 
-- Tweet screenshot (rendered with mobile-friendly width)
-- Video download (prefers highest-bitrate mp4 via `react-tweet` API)
-- Auto-redirect to Xiaohongshu publish page after screenshot
-- Auto-fill title and body text
-- Auto-redirect to Instagram post creation page after screenshot
-- Auto-upload images and fill Instagram caption (final publish remains manual)
-- Supports saving screenshot directly to local downloads
-- If a tweet contains images, upload order is:
-  1. Tweet screenshot
-  2. Tweet original images (appended in order)
-- UI text auto-switches between Chinese/English based on X page language
-- Video download status with live progress (percent or MB)
+- Adds actions to the X/Twitter tweet three-dot menu:
+  - `Send to Xiaohongshu`
+  - `Send to Instagram`
+  - `Save Screenshot Locally`
+  - `Download Video`
+- Captures tweets in mobile-friendly width for posting
+- Autofills Xiaohongshu publishing fields (images + title + body)
+- Autofills Instagram post flow (images + caption, final publish is manual)
+- Adds `Share to X` in Instagram post three-dot menu
+  - Opens X composer
+  - Fills text
+  - Uploads media in order (up to 4 items)
 
-## Installation (Developer Mode)
+## Install (Developer Mode)
 
-1. Open Chrome: `chrome://extensions`
+1. Open `chrome://extensions`
 2. Enable **Developer mode**
 3. Click **Load unpacked**
-4. Select folder: `C:\Users\gekaixing\Desktop\xtoimage`
+4. Select this project folder
 
 ## Usage
 
-### 1) Screenshot a tweet and publish to Xiaohongshu
+### X/Twitter -> Xiaohongshu
 
-1. Open any tweet and click the three-dot menu
-2. Click `Send to Xiaohongshu`
-3. The extension will automatically:
-   - capture the screenshot
-   - open Xiaohongshu publish page
-   - upload images and fill content
+1. Open a tweet
+2. Click the tweet three-dot menu
+3. Click `Send to Xiaohongshu`
+4. The extension captures and autofills on Xiaohongshu
 
-### 2) Screenshot a tweet and send to Instagram post
+### X/Twitter -> Instagram
 
-1. Open any tweet and click the three-dot menu
-2. Click `Send to Instagram`
-3. The extension will automatically:
-   - capture the screenshot
-   - open Instagram post creation flow
-   - upload images and fill caption (you manually click Publish)
+1. Open a tweet
+2. Click the tweet three-dot menu
+3. Click `Send to Instagram`
+4. The extension captures and opens Instagram compose flow
 
-### 3) Save screenshot locally
+### Instagram -> X
 
-1. Open any tweet and click the three-dot menu
-2. Click `Save Screenshot Locally`
-3. Browser downloads the screenshot PNG directly
+1. Open an Instagram post
+2. Click the post three-dot menu
+3. Click `Share to X`
+4. The extension opens X composer and autofills text + media
 
-### 4) Download tweet video
+### Local Save / Video Download
 
-1. Open a tweet that contains video
-2. Click the three-dot menu
-3. Click `Download Video`
-4. Browser download starts with status updates
+- `Save Screenshot Locally`: downloads tweet screenshot as PNG
+- `Download Video`: tries high-bitrate mp4 first, with fallback extraction
 
-## Technical Notes
+## Limitations
 
-- Extension type: Chrome Extension Manifest V3
-- Screenshot rendering: `dom-to-image`
-- Xiaohongshu autofill: content script + `chrome.storage.local`
-- Video download:
-  - Primary: `https://react-tweet.vercel.app/api/tweet/<tweetId>` for mp4 URL
-  - Fallback: extract source from in-page video element
-
-## Known Limitations
-
-- Some protected or specially encoded videos may not be directly downloadable
-- If Xiaohongshu page structure changes, autofill selectors may need updates
-- Max auto-upload image count is 9 (based on common platform limits)
+- X media constraints apply; auto-upload currently targets up to 4 media items
+- Some Instagram videos may fail due to source permissions/CORS
+- Social platform DOM changes may require selector updates
 
 ## Core Files
 
-- `manifest.json`: extension config
-- `content.js`: X page injection, screenshot, video download, UI notices
-- `background.js`: download task + progress relay
+- `manifest.json`: extension configuration
+- `content.js`: X/Twitter-side logic + autofill pipeline
+- `background.js`: service worker for messages/download/fetch bridge
 - `xhs-autofill.js`: Xiaohongshu autofill logic
-- `instagram-autofill.js`: Instagram post autofill logic
-- `icons/`: extension icons
+- `instagram-autofill.js`: Instagram autofill + Share-to-X logic
 
 ## License
 

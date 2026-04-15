@@ -111,6 +111,51 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'OPEN_X_COMPOSE') {
+    const url = 'https://x.com/compose/post';
+    chrome.tabs.create({ url }, () => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
+  if (message.type === 'FETCH_REMOTE_BLOB') {
+    const url = message.url;
+    if (!url) {
+      sendResponse({ ok: false, error: 'Missing url' });
+      return;
+    }
+
+    fetch(url)
+      .then(async (response) => {
+        if (!response.ok) {
+          sendResponse({ ok: false, error: `HTTP ${response.status}` });
+          return;
+        }
+        const blob = await response.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        sendResponse({
+          ok: true,
+          mime: blob.type || response.headers.get('content-type') || 'application/octet-stream',
+          dataUrl
+        });
+      })
+      .catch((error) => {
+        sendResponse({ ok: false, error: error && error.message ? error.message : 'fetch failed' });
+      });
+
+    return true;
+  }
+
   if (message.type === 'DOWNLOAD_VIDEO_URL') {
     if (!message.url) {
       sendResponse({ ok: false, error: 'Missing url' });

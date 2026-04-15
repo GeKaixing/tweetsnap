@@ -2,8 +2,10 @@
     'use strict';
     const XHS_PUBLISH_URL = 'https://creator.xiaohongshu.com/publish/publish?source=&published=true&from=tab_switch&target=image';
     const INSTAGRAM_CREATE_URL = 'https://www.instagram.com/';
-    const XHS_STORAGE_KEY = 'xtoimage_pending_post';
-    const INSTAGRAM_STORAGE_KEY = 'xtoimage_pending_post_instagram';
+    const XHS_STORAGE_KEY = 'tweetsnap_pending_post';
+    const INSTAGRAM_STORAGE_KEY = 'tweetsnap_pending_post_instagram';
+    const INS_TO_X_STORAGE_KEY = 'tweetsnap_pending_ins_to_x';
+    const INS_TO_X_DONE_KEY = 'tweetsnap_last_applied_ins_to_x';
     const MOBILE_TWEET_WIDTH = 375;
     const REACT_TWEET_API_BASE_URL = 'https://react-tweet.vercel.app/api/tweet/';
 
@@ -102,7 +104,7 @@
     }
 
     function getVideoProgressToast() {
-        const id = 'xtoimage-video-progress';
+        const id = 'tweetsnap-video-progress';
         let el = document.getElementById(id);
         if (!el) {
             el = document.createElement('div');
@@ -122,7 +124,7 @@
         el.style.backgroundColor = background;
         if (autoHideMs > 0) {
             setTimeout(() => {
-                const current = document.getElementById('xtoimage-video-progress');
+                const current = document.getElementById('tweetsnap-video-progress');
                 if (!current) return;
                 current.classList.add('fade-out');
                 setTimeout(() => current.remove(), 500);
@@ -136,6 +138,253 @@
             .replace(/\s+/g, ' ')
             .trim()
             .slice(0, 40) || 'tweet';
+    }
+
+    function setNativeInputValue(input, value) {
+        const proto = Object.getPrototypeOf(input);
+        const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+        if (descriptor && descriptor.set) {
+            descriptor.set.call(input, value);
+        } else {
+            input.value = value;
+        }
+    }
+
+    function setComposerText(node, text) {
+        if (!node) return false;
+        const value = String(text || '');
+        node.focus();
+
+        if ('value' in node) {
+            setNativeInputValue(node, value);
+            node.dispatchEvent(new Event('input', { bubbles: true }));
+            node.dispatchEvent(new Event('change', { bubbles: true }));
+            const readback = String(node.value || '');
+            return value ? readback.includes(value.slice(0, Math.min(16, value.length))) : true;
+        }
+
+        const isEditable = node.getAttribute('contenteditable') === 'true' || node.isContentEditable;
+        if (isEditable) {
+            try {
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                document.execCommand('insertText', false, value);
+            } catch (error) {
+                // Fallback to direct assignment when execCommand is blocked.
+                node.textContent = value;
+            }
+
+            try {
+                node.dispatchEvent(new InputEvent('input', {
+                    bubbles: true,
+                    inputType: 'insertText',
+                    data: value
+                }));
+            } catch (error) {
+                node.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            node.dispatchEvent(new Event('change', { bubbles: true }));
+            const readback = (node.innerText || node.textContent || '').trim();
+            return value ? readback.includes(value.slice(0, Math.min(16, value.length))) : true;
+        }
+
+        node.textContent = value;
+        node.dispatchEvent(new Event('input', { bubbles: true }));
+        node.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+    }
+
+    function fetchRemoteBlobViaBackground(url) {
+        return new Promise((resolve) => {
+            if (!chrome.runtime || !chrome.runtime.sendMessage) {
+                resolve(null);
+                return;
+            }
+
+            chrome.runtime.sendMessage({ type: 'FETCH_REMOTE_BLOB', url }, (response) => {
+                if (chrome.runtime.lastError || !response || !response.ok || !response.dataUrl) {
+                    resolve(null);
+                    return;
+                }
+                try {
+                    const [header, base64] = String(response.dataUrl).split(',');
+                    const mimeMatch = header.match(/data:(.*?);base64/);
+                    const mime = mimeMatch ? mimeMatch[1] : (response.mime || 'application/octet-stream');
+                    const binary = atob(base64 || '');
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i += 1) {
+                        bytes[i] = binary.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes], { type: mime });
+                    resolve(blob);
+                } catch (error) {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    function getPreferredXComposerRoot() {
+        const dialogCandidates = Array.from(document.querySelectorAll('[role="dialog"]'))
+            .filter((dialog) => dialog && dialog.offsetParent !== null)
+            .filter((dialog) => dialog.querySelector('[data-testid="tweetTextarea_0"], div[role="textbox"][contenteditable="true"], textarea'));
+        if (dialogCandidates.length > 0) {
+            return dialogCandidates[dialogCandidates.length - 1];
+        }
+
+        const pageComposer = document.querySelector('main [data-testid="tweetTextarea_0"], main div[role="textbox"][contenteditable="true"], main textarea[data-testid="tweetTextarea_0"]');
+        if (pageComposer) {
+            return pageComposer.closest('main') || document;
+        }
+        return document;
+    }
+
+    function getXComposerTextNode(root = document) {
+        const selectors = [
+            'div[data-testid="tweetTextarea_0"][contenteditable="true"]',
+            'div[role="textbox"][data-testid="tweetTextarea_0"]',
+            'textarea[data-testid="tweetTextarea_0"]',
+            '[data-testid="tweetTextarea_0"] div[role="textbox"][contenteditable="true"]'
+        ];
+        for (const selector of selectors) {
+            const node = root.querySelector(selector);
+            if (!node || node.offsetParent === null) continue;
+            const inComposer = node.closest('[data-testid="tweetTextarea_0"], [data-testid="toolBar"], [aria-label*="Post" i], [aria-label*="贴文"]');
+            if (!inComposer && !node.matches('[data-testid="tweetTextarea_0"]')) continue;
+            return node;
+        }
+        return null;
+    }
+
+    function getXComposerFileInput(root = document) {
+        const selectors = [
+            'input[data-testid="fileInput"]',
+            'input[type="file"][accept*="image"]',
+            'input[type="file"][accept*="video"]'
+        ];
+        for (const selector of selectors) {
+            const node = root.querySelector(selector);
+            if (node && !node.disabled) return node;
+        }
+        return null;
+    }
+
+    function extensionFromMime(mime) {
+        if (!mime) return 'bin';
+        if (mime.includes('jpeg')) return 'jpg';
+        if (mime.includes('png')) return 'png';
+        if (mime.includes('gif')) return 'gif';
+        if (mime.includes('webp')) return 'webp';
+        if (mime.includes('mp4')) return 'mp4';
+        if (mime.includes('webm')) return 'webm';
+        if (mime.includes('quicktime')) return 'mov';
+        return 'bin';
+    }
+
+    async function uploadInsMediaToX(fileInput, mediaUrls) {
+        if (!fileInput || !Array.isArray(mediaUrls) || mediaUrls.length === 0) {
+            return { uploaded: 0, total: 0 };
+        }
+
+        const limitedMediaUrls = mediaUrls.slice(0, 4);
+        const dt = new DataTransfer();
+        let uploaded = 0;
+        for (let i = 0; i < limitedMediaUrls.length; i += 1) {
+            const mediaUrl = limitedMediaUrls[i];
+            let blob = await fetchRemoteBlobViaBackground(mediaUrl);
+            if (!blob) {
+                await new Promise((resolve) => setTimeout(resolve, 450));
+                blob = await fetchRemoteBlobViaBackground(mediaUrl);
+            }
+            if (!blob) continue;
+            const ext = extensionFromMime(blob.type);
+            const file = new File([blob], `instagram_media_${i + 1}.${ext}`, {
+                type: blob.type || 'application/octet-stream'
+            });
+            dt.items.add(file);
+            uploaded += 1;
+        }
+
+        if (uploaded === 0) {
+            return { uploaded: 0, total: limitedMediaUrls.length };
+        }
+
+        fileInput.files = dt.files;
+        fileInput.dispatchEvent(new Event('input', { bubbles: true }));
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        return { uploaded, total: limitedMediaUrls.length };
+    }
+
+    function markInsToXDone(id) {
+        if (!chrome.storage || !chrome.storage.local) return;
+        chrome.storage.local.set({ [INS_TO_X_DONE_KEY]: id }, () => {
+            chrome.storage.local.remove(INS_TO_X_STORAGE_KEY);
+        });
+    }
+
+    function startInsToXAutofill() {
+        if (!chrome.storage || !chrome.storage.local) return;
+        chrome.storage.local.get([INS_TO_X_STORAGE_KEY, INS_TO_X_DONE_KEY], (data) => {
+            const payload = data[INS_TO_X_STORAGE_KEY];
+            const doneId = data[INS_TO_X_DONE_KEY];
+            if (!payload || !payload.id) return;
+            if (doneId && doneId === payload.id) return;
+
+            const age = Date.now() - (payload.createdAt || 0);
+            if (age > 30 * 60 * 1000) {
+                chrome.storage.local.remove(INS_TO_X_STORAGE_KEY);
+                return;
+            }
+
+            let attempts = 0;
+            const maxAttempts = 80;
+            let textDone = false;
+            let mediaDone = false;
+            let finalUploadResult = null;
+
+            const timer = setInterval(async () => {
+                attempts += 1;
+                const composerRoot = getPreferredXComposerRoot();
+                const textNode = getXComposerTextNode(composerRoot);
+                const fileInput = getXComposerFileInput(composerRoot);
+
+                if (!textDone && textNode) {
+                    textDone = setComposerText(textNode, payload.description || '');
+                }
+
+                if (!mediaDone && fileInput) {
+                    mediaDone = true;
+                    finalUploadResult = await uploadInsMediaToX(fileInput, payload.mediaUrls || []);
+                }
+
+                if (textDone && mediaDone) {
+                    clearInterval(timer);
+                    markInsToXDone(payload.id);
+                    const uploaded = finalUploadResult && typeof finalUploadResult.uploaded === 'number'
+                        ? finalUploadResult.uploaded
+                        : 0;
+                    const total = finalUploadResult && typeof finalUploadResult.total === 'number'
+                        ? finalUploadResult.total
+                        : 0;
+                    if (uploaded === total && total > 0) {
+                        showNotification(t('已自动填充并上传 Instagram 媒体到 X', 'Instagram content filled and media uploaded to X'), '#17BF63', 2600);
+                    } else if (total > 0) {
+                        showNotification(t(`已上传 ${uploaded}/${total} 个媒体，请检查后发送`, `${uploaded}/${total} media uploaded, please review`), '#F59E0B', 3000);
+                    } else {
+                        showNotification(t('未找到可上传媒体，请检查后发送', 'No media uploaded, please review'), '#F59E0B', 3000);
+                    }
+                    return;
+                }
+
+                if (attempts >= maxAttempts) {
+                    clearInterval(timer);
+                    showNotification(t('自动导入 Instagram 内容超时，请手动检查', 'Instagram import timed out, please check manually'), '#E0245E', 3000);
+                }
+            }, 500);
+        });
     }
 
     function extractTweetId(tweetUrl) {
@@ -491,7 +740,7 @@
 
         const imageDataUrls = [screenshotDataUrl, ...tweetImageDataUrls];
         const payload = {
-            id: `xtoimage-${Date.now()}`,
+            id: `tweetsnap-${Date.now()}`,
             createdAt: Date.now(),
             filename: `twitter-post-${Date.now()}.png`,
             imageDataUrl: screenshotDataUrl,
@@ -1355,4 +1604,5 @@
 
     addScreenshotButtons();
     setupVideoDownloadProgressListener();
+    startInsToXAutofill();
 })();

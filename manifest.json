@@ -1,6 +1,6 @@
 ﻿{
   "manifest_version": 3,
-  "name": "X to Image",
+  "name": "tweetsnap",
   "version": "0.1.0",
   "description": "Add a button to generate images from X/Twitter posts.",
   "icons": {
@@ -27,6 +27,8 @@
     "https://twitter.com/*",
     "https://creator.xiaohongshu.com/*",
     "https://www.instagram.com/*",
+    "https://*.cdninstagram.com/*",
+    "https://*.fbcdn.net/*",
     "https://react-tweet.vercel.app/*"
   ],
   "background": {
