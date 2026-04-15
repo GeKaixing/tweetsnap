@@ -4,6 +4,16 @@
 
 一个用于 **X / Twitter、Instagram、小红书** 的 Chrome 扩展，核心目标是把内容搬运流程做成一键化。
 
+## 使用截图
+
+### X 菜单入口
+
+![X Menu](./screenshots/x-menu.png)
+
+### Instagram 自动填充效果
+
+![Instagram Compose](./screenshots/instagram-compose.png)
+
 ## 主要能力
 
 - 在 X/Twitter 推文三点菜单中新增：

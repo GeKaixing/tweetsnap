@@ -4,6 +4,16 @@
 
 A Chrome extension for **X / Twitter, Instagram, and Xiaohongshu** cross-post workflows.
 
+## Screenshots
+
+### X Menu Actions
+
+![X Menu](./screenshots/x-menu.png)
+
+### Instagram Autofill Result
+
+![Instagram Compose](./screenshots/instagram-compose.png)
+
 ## What It Does
 
 - Adds actions to the X/Twitter tweet three-dot menu:

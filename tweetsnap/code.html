@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TweetSnap - Twitter Screenshot Tool | Download Twitter Video &amp; Share to Instagram</title>
+<meta content="One-click Twitter screenshot tool. Download Twitter videos and share tweets to Instagram or Xiaohongshu. Free, no login, instant cross-platform distribution." name="description"/>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed-dim": "#4adf9d",
+                    "surface-container-low": "#f0f4fb",
+                    "inverse-surface": "#2c3136",
+                    "background": "#f7f9ff",
+                    "primary-fixed-dim": "#95ccff",
+                    "error": "#ba1a1a",
+                    "on-tertiary": "#ffffff",
+                    "on-surface": "#171c21",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#2c1600",
+                    "on-background": "#171c21",
+                    "surface-bright": "#f7f9ff",
+                    "outline-variant": "#bec7d3",
+                    "on-surface-variant": "#3f4851",
+                    "on-primary": "#ffffff",
+                    "primary-container": "#1da1f2",
+                    "surface": "#f7f9ff",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "inverse-primary": "#95ccff",
+                    "tertiary-fixed": "#ffdcbd",
+                    "surface-container-highest": "#dfe3ea",
+                    "on-secondary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed-variant": "#005234",
+                    "on-secondary-container": "#00714a",
+                    "surface-variant": "#dfe3ea",
+                    "secondary": "#006c46",
+                    "outline": "#6f7882",
+                    "on-primary-container": "#003554",
+                    "on-secondary-fixed": "#002112",
+                    "on-primary-fixed": "#001d32",
+                    "tertiary": "#8a5100",
+                    "surface-container": "#eaeef5",
+                    "primary": "#006399",
+                    "on-error-container": "#93000a",
+                    "secondary-container": "#68f9b5",
+                    "on-tertiary-container": "#4c2a00",
+                    "tertiary-fixed-dim": "#ffb86e",
+                    "inverse-on-surface": "#edf1f8",
+                    "surface-tint": "#006399",
+                    "tertiary-container": "#de8500",
+                    "on-primary-fixed-variant": "#004a75",
+                    "primary-fixed": "#cde5ff",
+                    "secondary-fixed": "#6bfcb8",
+                    "surface-container-high": "#e5e8ef",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#d6dae1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .tonal-transition-bg-surface-container-low {
+        background-color: #f0f4fb;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+      .premium-shadow {
+        box-shadow: 0 20px 40px -15px rgba(23, 28, 33, 0.06);
+      }
+      .editorial-text {
+        line-height: 1.6;
+      }
+    </style>
+<script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "Is TweetSnap free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, TweetSnap is free forever for all core features, including high-quality screenshots and video downloads."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Do I need to login?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No login is required. TweetSnap works instantly within your browser without an account."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Is my data safe?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "TweetSnap is privacy-friendly. We do not track your browsing history or store personal data."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Which platforms are supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "TweetSnap optimized screenshots for Instagram, Xiaohongshu, and general social media sharing."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Can I download HD videos?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, TweetSnap extracts the highest resolution MP4 format available for any video on your X feed."
+        }
+      }]
+    }
+    </script>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm">
+<nav class="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-black tracking-tighter text-slate-900">TweetSnap</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-slate-600 hover:text-sky-600 transition-colors" href="#features">Features</a>
+<a class="text-slate-600 hover:text-sky-600 transition-colors" href="#tutorial">Tutorial</a>
+<a class="text-slate-600 hover:text-sky-600 transition-colors" href="#use-cases">Use Cases</a>
+<a class="text-slate-600 hover:text-sky-600 transition-colors" href="#faq">FAQ</a>
+<button class="bg-secondary text-on-secondary px-6 py-2 rounded-md font-bold hover:opacity-90 transition-all scale-95 duration-200 active:opacity-80 shadow-sm">
+                    Download
+                </button>
+</div>
+<button class="md:hidden p-2">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</nav>
+</header>
+<main class="pt-24 overflow-x-hidden">
+<!-- Hero Section -->
+<section class="relative px-8 pt-16 pb-32 max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
+<div class="flex-1 space-y-8 z-10">
+<span class="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold tracking-widest uppercase">THE DIGITAL CURATOR</span>
+<h1 class="text-5xl md:text-7xl font-black text-on-surface tracking-tighter leading-[1.1]">
+                    Screenshot Tweets &amp; <br/> <span class="text-primary">Share Anywhere.</span>
+</h1>
+<p class="text-lg md:text-xl text-on-surface-variant max-w-lg editorial-text">
+                    Transform X (Twitter) content into beautiful images or videos for IG and Xiaohongshu instantly. High-fidelity captures, no fluff.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4 pt-4">
+<button class="bg-secondary text-on-secondary px-8 py-4 rounded-md text-lg font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all group">
+                        Download Extension
+                        <span class="material-symbols-outlined">download</span>
+</button>
+<div class="flex items-center gap-4 px-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-sm font-medium">Free Forever</span>
+</div>
+<div class="flex items-center gap-2 border-l border-outline-variant pl-4">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">privacy_tip</span>
+<span class="text-sm font-medium">No Login</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 relative">
+<div class="absolute -top-20 -right-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
+<div class="relative bg-surface-container-lowest rounded-xl premium-shadow p-4 transform rotate-2 hover:rotate-0 transition-transform duration-500 max-w-md mx-auto">
+<div class="flex items-center gap-3 border-b border-surface-container-high pb-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-slate-200" data-alt="minimalist user avatar placeholder with soft neutral colors"></div>
+<div>
+<div class="h-3 w-24 bg-slate-200 rounded-full mb-2"></div>
+<div class="h-2 w-16 bg-slate-100 rounded-full"></div>
+</div>
+</div>
+<div class="space-y-3 mb-6">
+<div class="h-3 w-full bg-slate-50 rounded-full"></div>
+<div class="h-3 w-5/6 bg-slate-50 rounded-full"></div>
+<div class="h-3 w-4/6 bg-slate-50 rounded-full"></div>
+</div>
+<div class="rounded-lg h-48 bg-slate-100 overflow-hidden flex items-center justify-center relative">
+<img alt="Twitter Snap" class="w-full h-full object-cover" data-alt="minimal aesthetic mockup of a tweet converted into a high-end instagram story style graphic with soft gradient background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCujCJcyWfojfSffbZeritIXzLStQZgHvE5uPGLbP9XxBRWM2t9ljha3I4veGNJSKixjR1WlMi1rHyN9uuTIO-6WLu8DKuUKSNbaTELVpH7U3mLvtwKNYqBM19NrhEWsio5P7R-4B-5LuUC7pCc5ZGoQih9Dr_Gzjdk1rzQgNVH26pqaMhiriDhttPK87K5RiXVT1iPN1I3TdmBUDrE6ezvSNrOeZUPGEta2f6xJrbGh9bCPI4L-9nZyinjIromFPGmZ1bK3t69dIE"/>
+</div>
+</div>
+</div>
+</section>
+<!-- GEO Optimized Section: What is -->
+<section class="bg-surface-container-low py-24 px-8">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+<div class="order-2 md:order-1">
+<div class="aspect-square rounded-2xl overflow-hidden bg-surface-container-highest flex items-center justify-center premium-shadow">
+<img alt="Twitter Snapshot Tool" class="w-full h-full object-cover" data-alt="clean overhead desk shot with high-end designer aesthetics representing digital content curation and professional workspace" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVZMlhKjyYph1pC3o1WBAEz60fDi29S3T5qB080yKTN_hF47W7M-8PjqCNtAQ5YPAl0IhiuhQZuRLTZRw01az0I_GT_DE8hgR_-G5dSDXXh-e2XpB7eJyurWEtfXYext3XZwsMGkyrJk8eZAr2geQs5nrKc36FwQsb8VxnGWWMK3JpW8n1U4mwTfbdDb4tTbkyVtOWDOOKrr7bqdvPrZLcXoY6wDGEzJQPslbCwv1NJoM_NdBSFPVvDUD7JknTBgkICXs7ceBkmO8"/>
+</div>
+</div>
+<div class="order-1 md:order-2 space-y-6">
+<span class="text-label text-tertiary font-bold tracking-widest uppercase">KNOWLEDGE BASE</span>
+<h2 class="text-4xl font-black tracking-tight leading-tight">What is a Twitter screenshot tool?</h2>
+<p class="text-lg text-on-surface-variant editorial-text">
+                        A Twitter screenshot tool is a specialized digital curator that captures high-quality snapshots of tweets optimized for cross-platform sharing. Unlike basic mobile screenshots, our tool ensures your content looks professional everywhere.
+                    </p>
+<ul class="space-y-4 pt-4">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1">auto_awesome</span>
+<span class="font-medium">Capture tweets as clean, high-resolution images.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1">layers_clear</span>
+<span class="font-medium">Remove UI clutter like navigation and ads automatically.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1">format_color_text</span>
+<span class="font-medium">Maintain crisp text clarity even when resized for stories.</span>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- GEO Optimized Section: How to Video -->
+<section class="py-24 px-8">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+<div class="space-y-6">
+<span class="text-label text-primary font-bold tracking-widest uppercase">VIDEO DOWNLOADER</span>
+<h2 class="text-4xl font-black tracking-tight leading-tight">How to download Twitter videos?</h2>
+<p class="text-lg text-on-surface-variant editorial-text">
+                        Use the TweetSnap extension to extract and save video files directly from your X feed. No more sketchy third-party websites or long waiting times for processing.
+                    </p>
+<ul class="space-y-4 pt-4">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-secondary mt-1" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+<span class="font-medium">One-click download button appears right on the video.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-secondary mt-1" style="font-variation-settings: 'FILL' 1;">hd</span>
+<span class="font-medium">Saves in high-resolution MP4 format instantly.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-secondary mt-1" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-medium">No external site visits needed—all processing is local.</span>
+</li>
+</ul>
+</div>
+<div class="relative">
+<div class="rounded-2xl overflow-hidden bg-on-surface p-2 shadow-2xl rotate-1">
+<img alt="Twitter Video Download" class="rounded-xl w-full" data-alt="professional dashboard interface showing high-speed video processing and file download progress with sleek blue accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANFU8mMXrJ76cunF_sZtGfJF7D3wganFQ588BIsxIV1G78Jb7SGBr0_zfOxn477DRY8mQPw6h52o5bkGW962NMjjTAjlxBhkH1O2RMaFeCRug__igcD3aVaNe9JrVYW0mhTAiS6uBbzD0uRld_Iz8HExPuXeiP-Ppk0oHc1v8STidNju_GwCiEBF6WxDpQ7mkZR-w6stdVY6-ll8niMrlkiZDqqxLsL3M-jO59fSxII5M9bhvPWCzaGH5BHLM_F2RfzmA-PeMaUjM"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Bento Grid -->
+<section class="bg-surface-container-low py-24 px-8" id="features">
+<div class="max-w-7xl mx-auto">
+<div class="text-center mb-16 space-y-4">
+<h2 class="text-4xl font-black tracking-tight">Key Features</h2>
+<p class="text-on-surface-variant max-w-xl mx-auto editorial-text">Everything you need to turn tweets into high-performing content for other social platforms.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Feature 1 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl premium-shadow group hover:-translate-y-2 transition-all">
+<div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">share</span>
+</div>
+<h3 class="text-xl font-bold mb-3">Cross-platform distribution</h3>
+<p class="text-on-surface-variant text-sm editorial-text">Optimized formats for Twitter to Instagram Reels, Carousels, and Xiaohongshu notes.</p>
+</div>
+<!-- Feature 2 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl premium-shadow group hover:-translate-y-2 transition-all">
+<div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<h3 class="text-xl font-bold mb-3">High-speed processing</h3>
+<p class="text-on-surface-variant text-sm editorial-text">Export assets in milliseconds. Our streamlined engine handles heavy media with ease.</p>
+</div>
+<!-- Feature 3 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl premium-shadow group hover:-translate-y-2 transition-all">
+<div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">no_accounts</span>
+</div>
+<h3 class="text-xl font-bold mb-3">No account needed</h3>
+<p class="text-on-surface-variant text-sm editorial-text">Privacy first. We don't ask for your email, your data, or your Twitter login credentials.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Tutorial Section -->
+<section class="py-24 px-8 max-w-7xl mx-auto" id="tutorial">
+<h2 class="text-4xl font-black tracking-tight mb-16 text-center">How to use TweetSnap?</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+<!-- Line background for desktop -->
+<div class="hidden md:block absolute top-1/4 left-0 w-full h-0.5 bg-outline-variant/30 -z-10"></div>
+<!-- Step 1 -->
+<div class="space-y-6 text-center">
+<div class="w-16 h-16 bg-surface-container-lowest rounded-full premium-shadow flex items-center justify-center mx-auto text-2xl font-black text-primary border-4 border-surface">1</div>
+<h3 class="text-xl font-bold">Install from Chrome Store</h3>
+<p class="text-on-surface-variant text-sm px-4">Add TweetSnap to your browser with a single click from the official store.</p>
+</div>
+<!-- Step 2 -->
+<div class="space-y-6 text-center">
+<div class="w-16 h-16 bg-surface-container-lowest rounded-full premium-shadow flex items-center justify-center mx-auto text-2xl font-black text-primary border-4 border-surface">2</div>
+<h3 class="text-xl font-bold">Click the 'Snap' button</h3>
+<p class="text-on-surface-variant text-sm px-4">Find the TweetSnap icon integrated directly into your Twitter timeline.</p>
+</div>
+<!-- Step 3 -->
+<div class="space-y-6 text-center">
+<div class="w-16 h-16 bg-surface-container-lowest rounded-full premium-shadow flex items-center justify-center mx-auto text-2xl font-black text-primary border-4 border-surface">3</div>
+<h3 class="text-xl font-bold">Save or Share</h3>
+<p class="text-on-surface-variant text-sm px-4">Download your high-res asset or share it directly to your preferred platform.</p>
+</div>
+</div>
+</section>
+<!-- Use Cases -->
+<section class="bg-primary text-on-primary py-24 px-8" id="use-cases">
+<div class="max-w-7xl mx-auto">
+<h2 class="text-4xl font-black tracking-tight mb-16 text-center">Why use a Tweet screenshot tool?</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="bg-on-primary-container/20 p-8 rounded-xl backdrop-blur-sm border border-white/10">
+<h3 class="text-2xl font-bold mb-4">Content Creators</h3>
+<p class="opacity-80 editorial-text">Repurpose viral tweets for Instagram Reels or Pinterest. High-visual impact keeps engagement high across different audiences.</p>
+</div>
+<div class="bg-on-primary-container/20 p-8 rounded-xl backdrop-blur-sm border border-white/10">
+<h3 class="text-2xl font-bold mb-4">Social Media Managers</h3>
+<p class="opacity-80 editorial-text">Archive important brand mentions and threads effortlessly. Build a swipe file of industry insights that actually looks good.</p>
+</div>
+<div class="bg-on-primary-container/20 p-8 rounded-xl backdrop-blur-sm border border-white/10">
+<h3 class="text-2xl font-bold mb-4">Curators</h3>
+<p class="opacity-80 editorial-text">Organize high-density information without the visual clutter of standard browser bookmarks or messy phone screenshots.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="py-24 px-8 max-w-4xl mx-auto" id="faq">
+<h2 class="text-4xl font-black tracking-tight mb-12 text-center">Frequently Asked Questions</h2>
+<div class="space-y-6">
+<details class="group bg-surface-container-lowest rounded-xl premium-shadow overflow-hidden" open="">
+<summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+<span class="font-bold text-lg">Is TweetSnap free?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-on-surface-variant editorial-text border-t border-surface-container-low">
+                        Yes, TweetSnap is free forever for all core features, including high-quality screenshots and video downloads.
+                    </div>
+</details>
+<details class="group bg-surface-container-lowest rounded-xl premium-shadow overflow-hidden">
+<summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+<span class="font-bold text-lg">Do I need to login?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-on-surface-variant editorial-text border-t border-surface-container-low">
+                        No login is required. TweetSnap works instantly within your browser without creating an account or providing email.
+                    </div>
+</details>
+<details class="group bg-surface-container-lowest rounded-xl premium-shadow overflow-hidden">
+<summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+<span class="font-bold text-lg">Is my data safe?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-on-surface-variant editorial-text border-t border-surface-container-low">
+                        TweetSnap is privacy-friendly. We do not track your browsing history or store personal data on any servers.
+                    </div>
+</details>
+<details class="group bg-surface-container-lowest rounded-xl premium-shadow overflow-hidden">
+<summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+<span class="font-bold text-lg">Which platforms are supported?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-on-surface-variant editorial-text border-t border-surface-container-low">
+                        TweetSnap provides optimized aspect ratios and layouts for Instagram Stories, Posts, and Xiaohongshu notes.
+                    </div>
+</details>
+<details class="group bg-surface-container-lowest rounded-xl premium-shadow overflow-hidden">
+<summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+<span class="font-bold text-lg">Can I download HD videos?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-on-surface-variant editorial-text border-t border-surface-container-low">
+                        Yes, TweetSnap automatically detects and extracts the highest resolution MP4 format available for any video on your X feed.
+                    </div>
+</details>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="bg-surface-container-high py-24 px-8 text-center">
+<div class="max-w-3xl mx-auto space-y-8">
+<h2 class="text-5xl font-black tracking-tighter">Ready to curate?</h2>
+<p class="text-xl text-on-surface-variant editorial-text">Join thousands of creators and professionals using TweetSnap to build their digital presence.</p>
+<button class="bg-secondary text-on-secondary px-12 py-5 rounded-md text-xl font-bold hover:shadow-2xl transition-all scale-100 hover:scale-105 active:scale-95 shadow-xl">
+                    Get TweetSnap Now — It's Free
+                </button>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 w-full rounded-t-3xl">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 px-12 py-16 max-w-7xl mx-auto">
+<div class="space-y-4">
+<div class="text-lg font-bold text-slate-900">TweetSnap</div>
+<p class="text-sm font-inter leading-relaxed text-slate-500">© 2024 TweetSnap. The Digital Curator. All rights reserved.</p>
+</div>
+<div class="flex flex-col gap-3">
+<span class="text-label text-xs font-black uppercase text-slate-400">Product</span>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#features">Features</a>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#tutorial">Tutorial</a>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#use-cases">Use Cases</a>
+</div>
+<div class="flex flex-col gap-3">
+<span class="text-label text-xs font-black uppercase text-slate-400">Resources</span>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#faq">FAQ</a>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#">Chrome Store</a>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#">Support</a>
+</div>
+<div class="flex flex-col gap-3">
+<span class="text-label text-xs font-black uppercase text-slate-400">Legal</span>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#">Privacy Policy</a>
+<a class="text-sm text-slate-500 hover:text-slate-900 transition-transform hover:translate-x-1" href="#">Terms of Service</a>
+</div>
+</div>
+</footer>
+</body></html>
