@@ -156,6 +156,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'FETCH_JSON_URL') {
+    const url = message.url;
+    if (!url) {
+      sendResponse({ ok: false, error: 'Missing url' });
+      return;
+    }
+
+    fetch(url)
+      .then(async (response) => {
+        if (!response.ok) {
+          sendResponse({ ok: false, error: `HTTP ${response.status}` });
+          return;
+        }
+        const json = await response.json();
+        sendResponse({ ok: true, json });
+      })
+      .catch((error) => {
+        sendResponse({ ok: false, error: error && error.message ? error.message : 'fetch failed' });
+      });
+
+    return true;
+  }
+
+  if (message.type === 'RESOLVE_FINAL_URL') {
+    const url = message.url;
+    if (!url) {
+      sendResponse({ ok: false, error: 'Missing url' });
+      return;
+    }
+
+    fetch(url, { method: 'GET', redirect: 'follow' })
+      .then((response) => {
+        sendResponse({ ok: true, url: response.url || url });
+      })
+      .catch((error) => {
+        sendResponse({ ok: false, error: error && error.message ? error.message : 'resolve failed' });
+      });
+
+    return true;
+  }
+
   if (message.type === 'DOWNLOAD_VIDEO_URL') {
     if (!message.url) {
       sendResponse({ ok: false, error: 'Missing url' });

@@ -29,7 +29,15 @@
     "https://www.instagram.com/*",
     "https://*.cdninstagram.com/*",
     "https://*.fbcdn.net/*",
-    "https://react-tweet.vercel.app/*"
+    "https://react-tweet.vercel.app/*",
+    "https://www.tiktok.com/*",
+    "https://*.tiktok.com/*",
+    "https://*.tiktokcdn.com/*",
+    "https://*.tiktokv.com/*",
+    "https://*.byteoversea.com/*",
+    "https://*.ibytedtos.com/*",
+    "https://*.ibyteimg.com/*",
+    "https://*.muscdn.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -61,6 +69,16 @@
       ],
       "js": [
         "instagram-autofill.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.tiktok.com/*",
+        "https://*.tiktok.com/*"
+      ],
+      "js": [
+        "tiktok-autofill.js"
       ],
       "run_at": "document_idle"
     }

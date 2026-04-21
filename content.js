@@ -6,6 +6,8 @@
     const INSTAGRAM_STORAGE_KEY = 'tweetsnap_pending_post_instagram';
     const INS_TO_X_STORAGE_KEY = 'tweetsnap_pending_ins_to_x';
     const INS_TO_X_DONE_KEY = 'tweetsnap_last_applied_ins_to_x';
+    const TIKTOK_TO_X_STORAGE_KEY = 'tweetsnap_pending_tiktok_to_x';
+    const TIKTOK_TO_X_DONE_KEY = 'tweetsnap_last_applied_tiktok_to_x';
     const MOBILE_TWEET_WIDTH = 375;
     const REACT_TWEET_API_BASE_URL = 'https://react-tweet.vercel.app/api/tweet/';
 
@@ -227,6 +229,23 @@
         });
     }
 
+    function dataUrlToBlob(dataUrl) {
+        try {
+            const [header, base64] = String(dataUrl || '').split(',');
+            if (!header || !base64) return null;
+            const mimeMatch = header.match(/data:(.*?);base64/);
+            const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return new Blob([bytes], { type: mime });
+        } catch (error) {
+            return null;
+        }
+    }
+
     function getPreferredXComposerRoot() {
         const dialogCandidates = Array.from(document.querySelectorAll('[role="dialog"]'))
             .filter((dialog) => dialog && dialog.offsetParent !== null)
@@ -259,17 +278,34 @@
         return null;
     }
 
-    function getXComposerFileInput(root = document) {
-        const selectors = [
-            'input[data-testid="fileInput"]',
-            'input[type="file"][accept*="image"]',
-            'input[type="file"][accept*="video"]'
-        ];
-        for (const selector of selectors) {
-            const node = root.querySelector(selector);
-            if (node && !node.disabled) return node;
+    function isVideoAcceptInput(node) {
+        if (!node) return false;
+        const accept = String(node.getAttribute('accept') || '').toLowerCase();
+        return accept.includes('video') || accept.includes('.mp4') || accept.includes('quicktime') || accept.includes('.mov');
+    }
+
+    function getXComposerFileInput(root = document, options = {}) {
+        const { preferVideo = false } = options || {};
+        const nodes = Array.from(root.querySelectorAll('input[type="file"]'))
+            .filter((node) => node && !node.disabled);
+
+        if (nodes.length === 0) return null;
+
+        if (preferVideo) {
+            const videoNode = nodes.find((node) => isVideoAcceptInput(node));
+            if (videoNode) return videoNode;
         }
-        return null;
+
+        const byTestId = nodes.find((node) => node.getAttribute('data-testid') === 'fileInput');
+        if (byTestId) return byTestId;
+
+        const imageNode = nodes.find((node) => {
+            const accept = String(node.getAttribute('accept') || '').toLowerCase();
+            return accept.includes('image');
+        });
+        if (imageNode) return imageNode;
+
+        return nodes[0] || null;
     }
 
     function extensionFromMime(mime) {
@@ -284,14 +320,61 @@
         return 'bin';
     }
 
-    async function uploadInsMediaToX(fileInput, mediaUrls) {
+    async function readBlobHeadText(blob, length = 160) {
+        try {
+            const chunk = blob.slice(0, length);
+            const text = await chunk.text();
+            return String(text || '').trim().toLowerCase();
+        } catch (error) {
+            return '';
+        }
+    }
+
+    async function isLikelyHtmlBlob(blob) {
+        const type = String(blob && blob.type ? blob.type : '').toLowerCase();
+        if (type.includes('text/html') || type.includes('application/xhtml+xml')) {
+            return true;
+        }
+        const head = await readBlobHeadText(blob, 200);
+        if (!head) return false;
+        return head.startsWith('<!doctype html') || head.startsWith('<html') || head.includes('<head');
+    }
+
+    async function isLikelyMp4Blob(blob) {
+        try {
+            const header = await blob.slice(0, 256).arrayBuffer();
+            const bytes = new Uint8Array(header);
+            if (bytes.length < 8) return false;
+            const ascii = Array.from(bytes)
+                .map((b) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : ' '))
+                .join('');
+            return ascii.includes('ftyp');
+        } catch (error) {
+            return false;
+        }
+    }
+
+    async function uploadInsMediaToX(fileInput, mediaUrls, options = {}) {
         if (!fileInput || !Array.isArray(mediaUrls) || mediaUrls.length === 0) {
             return { uploaded: 0, total: 0 };
         }
 
-        const limitedMediaUrls = mediaUrls.slice(0, 4);
+        const {
+            maxItems = 4,
+            filenamePrefix = 'instagram_media',
+            forcedMime = '',
+            forcedExt = '',
+            maxBytesPerFile = 0,
+            requireVideoMp4 = false,
+            strictMp4Signature = false,
+            fallbackMime = 'application/octet-stream'
+        } = options || {};
+
+        const limitedMediaUrls = mediaUrls.slice(0, maxItems);
         const dt = new DataTransfer();
         let uploaded = 0;
+        let rejected = 0;
+        let invalidFormat = 0;
         for (let i = 0; i < limitedMediaUrls.length; i += 1) {
             const mediaUrl = limitedMediaUrls[i];
             let blob = await fetchRemoteBlobViaBackground(mediaUrl);
@@ -300,28 +383,130 @@
                 blob = await fetchRemoteBlobViaBackground(mediaUrl);
             }
             if (!blob) continue;
-            const ext = extensionFromMime(blob.type);
-            const file = new File([blob], `instagram_media_${i + 1}.${ext}`, {
-                type: blob.type || 'application/octet-stream'
+
+            if (maxBytesPerFile > 0 && blob.size > maxBytesPerFile) {
+                rejected += 1;
+                continue;
+            }
+
+            if (requireVideoMp4) {
+                const htmlBlob = await isLikelyHtmlBlob(blob);
+                if (htmlBlob) {
+                    invalidFormat += 1;
+                    continue;
+                }
+                if (strictMp4Signature) {
+                    const mp4Blob = await isLikelyMp4Blob(blob);
+                    if (!mp4Blob) {
+                        invalidFormat += 1;
+                        continue;
+                    }
+                }
+            }
+
+            const resolvedMime = forcedMime || blob.type || fallbackMime;
+            const ext = forcedExt || extensionFromMime(resolvedMime);
+            const file = new File([blob], `${filenamePrefix}_${i + 1}.${ext}`, {
+                type: resolvedMime
             });
             dt.items.add(file);
             uploaded += 1;
         }
 
         if (uploaded === 0) {
-            return { uploaded: 0, total: limitedMediaUrls.length };
+            return { uploaded: 0, total: limitedMediaUrls.length, rejected, invalidFormat };
         }
 
         fileInput.files = dt.files;
         fileInput.dispatchEvent(new Event('input', { bubbles: true }));
         fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-        return { uploaded, total: limitedMediaUrls.length };
+        return { uploaded, total: limitedMediaUrls.length, rejected, invalidFormat };
+    }
+
+    async function uploadDataUrlsToX(fileInput, dataUrls, options = {}) {
+        if (!fileInput || !Array.isArray(dataUrls) || dataUrls.length === 0) {
+            return { uploaded: 0, total: 0, rejected: 0, invalidFormat: 0 };
+        }
+
+        const {
+            maxItems = 1,
+            filenamePrefix = 'media',
+            forcedMime = '',
+            forcedExt = '',
+            maxBytesPerFile = 0,
+            requireVideoMp4 = false,
+            strictMp4Signature = false,
+            fallbackMime = 'application/octet-stream'
+        } = options || {};
+
+        const dt = new DataTransfer();
+        let uploaded = 0;
+        let rejected = 0;
+        let invalidFormat = 0;
+        const limited = dataUrls.slice(0, maxItems);
+
+        for (let i = 0; i < limited.length; i += 1) {
+            const blobRaw = dataUrlToBlob(limited[i]);
+            if (!blobRaw) {
+                invalidFormat += 1;
+                continue;
+            }
+            const blob = forcedMime && blobRaw.type !== forcedMime
+                ? new Blob([blobRaw], { type: forcedMime })
+                : blobRaw;
+
+            if (maxBytesPerFile > 0 && blob.size > maxBytesPerFile) {
+                rejected += 1;
+                continue;
+            }
+
+            if (requireVideoMp4) {
+                const htmlBlob = await isLikelyHtmlBlob(blob);
+                if (htmlBlob) {
+                    invalidFormat += 1;
+                    continue;
+                }
+                if (strictMp4Signature) {
+                    const mp4Blob = await isLikelyMp4Blob(blob);
+                    if (!mp4Blob) {
+                        invalidFormat += 1;
+                        continue;
+                    }
+                }
+            }
+
+            const resolvedMime = forcedMime || blob.type || fallbackMime;
+            const ext = forcedExt || extensionFromMime(resolvedMime);
+            const file = new File([blob], `${filenamePrefix}_${i + 1}.${ext}`, { type: resolvedMime });
+            dt.items.add(file);
+            uploaded += 1;
+        }
+
+        if (uploaded === 0) {
+            return { uploaded: 0, total: limited.length, rejected, invalidFormat };
+        }
+
+        fileInput.files = dt.files;
+        fileInput.dispatchEvent(new Event('input', { bubbles: true }));
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        const assigned = fileInput.files && fileInput.files.length > 0 ? fileInput.files[0] : null;
+        if (requireVideoMp4 && assigned && assigned.type && !String(assigned.type).toLowerCase().startsWith('video/')) {
+            return { uploaded: 0, total: limited.length, rejected, invalidFormat: invalidFormat + 1 };
+        }
+        return { uploaded, total: limited.length, rejected, invalidFormat };
     }
 
     function markInsToXDone(id) {
         if (!chrome.storage || !chrome.storage.local) return;
         chrome.storage.local.set({ [INS_TO_X_DONE_KEY]: id }, () => {
             chrome.storage.local.remove(INS_TO_X_STORAGE_KEY);
+        });
+    }
+
+    function markTikTokToXDone(id) {
+        if (!chrome.storage || !chrome.storage.local) return;
+        chrome.storage.local.set({ [TIKTOK_TO_X_DONE_KEY]: id }, () => {
+            chrome.storage.local.remove(TIKTOK_TO_X_STORAGE_KEY);
         });
     }
 
@@ -382,6 +567,99 @@
                 if (attempts >= maxAttempts) {
                     clearInterval(timer);
                     showNotification(t('自动导入 Instagram 内容超时，请手动检查', 'Instagram import timed out, please check manually'), '#E0245E', 3000);
+                }
+            }, 500);
+        });
+    }
+
+    function startTikTokToXAutofill() {
+        if (!chrome.storage || !chrome.storage.local) return;
+        chrome.storage.local.get([TIKTOK_TO_X_STORAGE_KEY, TIKTOK_TO_X_DONE_KEY], (data) => {
+            const payload = data[TIKTOK_TO_X_STORAGE_KEY];
+            const doneId = data[TIKTOK_TO_X_DONE_KEY];
+            if (!payload || !payload.id) return;
+            if (doneId && doneId === payload.id) return;
+
+            const age = Date.now() - (payload.createdAt || 0);
+            if (age > 30 * 60 * 1000) {
+                chrome.storage.local.remove(TIKTOK_TO_X_STORAGE_KEY);
+                return;
+            }
+
+            let attempts = 0;
+            const maxAttempts = 90;
+            let textDone = false;
+            let mediaDone = false;
+            let finalUploadResult = null;
+
+            const timer = setInterval(async () => {
+                attempts += 1;
+                const composerRoot = getPreferredXComposerRoot();
+                const textNode = getXComposerTextNode(composerRoot);
+                const fileInput = getXComposerFileInput(composerRoot, { preferVideo: true });
+
+                if (!textDone && textNode) {
+                    textDone = setComposerText(textNode, payload.description || '');
+                }
+
+                if (!mediaDone && fileInput) {
+                    mediaDone = true;
+                    const uploadOptions = {
+                        maxItems: 1,
+                        filenamePrefix: 'tiktok_video',
+                        forcedMime: 'video/mp4',
+                        forcedExt: 'mp4',
+                        maxBytesPerFile: 512 * 1024 * 1024,
+                        requireVideoMp4: true,
+                        strictMp4Signature: false,
+                        fallbackMime: 'video/mp4'
+                    };
+
+                    if (payload.mediaDataUrl) {
+                        finalUploadResult = await uploadDataUrlsToX(fileInput, [payload.mediaDataUrl], uploadOptions);
+                        if (!finalUploadResult || finalUploadResult.uploaded === 0) {
+                            finalUploadResult = await uploadInsMediaToX(fileInput, (payload.mediaUrls || []).slice(0, 1), uploadOptions);
+                        }
+                    } else {
+                        // TikTok often returns octet-stream/blob source in browser context.
+                        // Force mp4 metadata so X web composer recognizes it as video.
+                        finalUploadResult = await uploadInsMediaToX(fileInput, (payload.mediaUrls || []).slice(0, 1), uploadOptions);
+                    }
+                }
+
+                if (textDone && mediaDone) {
+                    clearInterval(timer);
+                    markTikTokToXDone(payload.id);
+                    const uploaded = finalUploadResult && typeof finalUploadResult.uploaded === 'number'
+                        ? finalUploadResult.uploaded
+                        : 0;
+                    const total = finalUploadResult && typeof finalUploadResult.total === 'number'
+                        ? finalUploadResult.total
+                        : 0;
+                    const rejected = finalUploadResult && typeof finalUploadResult.rejected === 'number'
+                        ? finalUploadResult.rejected
+                        : 0;
+                    const invalidFormat = finalUploadResult && typeof finalUploadResult.invalidFormat === 'number'
+                        ? finalUploadResult.invalidFormat
+                        : 0;
+
+                    if (uploaded === total && total > 0) {
+                        showNotification(t('已自动填充并上传 TikTok 视频到 X', 'TikTok content filled and video uploaded to X'), '#17BF63', 2800);
+                    } else if (invalidFormat > 0) {
+                        showNotification(t('获取到的 TikTok 资源不是可上传 MP4，请手动下载后上传', 'TikTok resource is not a valid MP4. Please download and upload manually'), '#F59E0B', 3800);
+                    } else if (rejected > 0) {
+                        showNotification(t('视频体积超过 X 限制，请压缩后手动上传', 'Video exceeds X size limit, please compress and upload manually'), '#F59E0B', 3600);
+                    } else if (total > 0) {
+                        showNotification(t('视频未自动上传成功，请手动上传后发送', 'Video upload did not complete, please upload manually'), '#F59E0B', 3200);
+                    } else {
+                        showNotification(t('未找到可上传视频，请手动上传后发送', 'No uploadable video found, please upload manually'), '#F59E0B', 3200);
+                    }
+                    return;
+                }
+
+                if (attempts >= maxAttempts) {
+                    clearInterval(timer);
+                    showNotification(t('自动导入 TikTok 内容超时，请手动检查', 'TikTok import timed out, please check manually'), '#E0245E', 3200);
                 }
             }, 500);
         });
@@ -1605,4 +1883,5 @@
     addScreenshotButtons();
     setupVideoDownloadProgressListener();
     startInsToXAutofill();
+    startTikTokToXAutofill();
 })();
