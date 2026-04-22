@@ -9,6 +9,8 @@
     const TIKTOK_TO_X_STORAGE_KEY = 'tweetsnap_pending_tiktok_to_x';
     const TIKTOK_TO_X_DONE_KEY = 'tweetsnap_last_applied_tiktok_to_x';
     const MOBILE_TWEET_WIDTH = 375;
+    const XHS_SPLIT_HEIGHT_RATIO = 2.0;
+    const XHS_SPLIT_OVERLAP_PX = 48;
     const REACT_TWEET_API_BASE_URL = 'https://react-tweet.vercel.app/api/tweet/';
 
     function isZhLanguage() {
@@ -915,6 +917,41 @@
         }
     }
 
+    async function splitTallImageForXhs(dataUrl) {
+        try {
+            const img = await loadImageFromDataUrl(dataUrl);
+            const width = img.naturalWidth || img.width;
+            const height = img.naturalHeight || img.height;
+            if (!width || !height) return [dataUrl];
+
+            if (height <= width * XHS_SPLIT_HEIGHT_RATIO) {
+                return [dataUrl];
+            }
+
+            const midpoint = Math.floor(height / 2);
+            const overlap = Math.min(XHS_SPLIT_OVERLAP_PX, Math.floor(height * 0.08));
+            const slices = [
+                { startY: 0, endY: Math.min(height, midpoint + overlap) },
+                { startY: Math.max(0, midpoint - overlap), endY: height }
+            ];
+
+            return slices.map(({ startY, endY }) => {
+                const sliceHeight = Math.max(1, endY - startY);
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = sliceHeight;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    return dataUrl;
+                }
+                ctx.drawImage(img, 0, startY, width, sliceHeight, 0, 0, width, sliceHeight);
+                return canvas.toDataURL('image/png');
+            });
+        } catch (error) {
+            return [dataUrl];
+        }
+    }
+
     async function fetchImageAsDataUrl(url) {
         try {
             const response = await fetch(url);
@@ -1002,10 +1039,13 @@
         const forInstagram = !!options.forInstagram;
         const tweetData = collectTweetData(tweetContainer);
         const screenshotDataUrlRaw = await blobToDataURL(blob);
-        const screenshotProcessed = forInstagram
-            ? await normalizeInstagramImageTopAnchored(screenshotDataUrlRaw)
-            : { dataUrl: screenshotDataUrlRaw, wasTopCropped: false };
-        const screenshotDataUrl = screenshotProcessed.dataUrl;
+        const screenshotSourceDataUrls = forInstagram
+            ? await splitTallImageForXhs(screenshotDataUrlRaw)
+            : await splitTallImageForXhs(screenshotDataUrlRaw);
+        const screenshotProcessedItems = forInstagram
+            ? await Promise.all(screenshotSourceDataUrls.map((item) => normalizeInstagramImageTopAnchored(item)))
+            : screenshotSourceDataUrls.map((item) => ({ dataUrl: item, wasTopCropped: false }));
+        const screenshotDataUrls = screenshotProcessedItems.map((item) => item.dataUrl);
 
         const tweetImageDataUrlsRaw = await collectTweetImageDataUrls(tweetContainer);
         const tweetImageProcessed = forInstagram
@@ -1013,15 +1053,15 @@
             : tweetImageDataUrlsRaw.map((item) => ({ dataUrl: item, wasTopCropped: false }));
         const tweetImageDataUrls = tweetImageProcessed.map((item) => item.dataUrl);
         const instagramNeedsOriginalClick = forInstagram && (
-            screenshotProcessed.wasTopCropped || tweetImageProcessed.some((item) => item.wasTopCropped)
+            screenshotProcessedItems.some((item) => item.wasTopCropped) || tweetImageProcessed.some((item) => item.wasTopCropped)
         );
 
-        const imageDataUrls = [screenshotDataUrl, ...tweetImageDataUrls];
+        const imageDataUrls = [...screenshotDataUrls, ...tweetImageDataUrls];
         const payload = {
             id: `tweetsnap-${Date.now()}`,
             createdAt: Date.now(),
             filename: `twitter-post-${Date.now()}.png`,
-            imageDataUrl: screenshotDataUrl,
+            imageDataUrl: imageDataUrls[0],
             imageDataUrls,
             tweetText: tweetData.text,
             tweetUrl: tweetData.tweetUrl,
